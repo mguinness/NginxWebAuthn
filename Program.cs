@@ -100,7 +100,7 @@ app.MapPost("/auth/get_challenge_for_existing_key", (HttpContext ctx) =>
     var allowCredentials = new[] {
         new {
             type = "public-key",
-            id = realms[origin.Host]
+            id = realms[origin.Host].Split(' ')[0]
         }
     };
 
@@ -119,11 +119,16 @@ app.MapPost("/auth/complete_challenge_for_existing_key", (JsonElement data, Http
     var key = (string)ctx.Request.Headers["X-Forwarded-For"] ?? ctx.Connection.RemoteIpAddress.ToString();
     string challenge = cache.Get<string>(key);
 
-    realms.TryGetValue(origin.Host, out var rawId);
+    string authenticatorData = data.GetProperty("authenticatorData").GetString();
+    string clientDataJSON = data.GetProperty("clientDataJSON").GetString();
+    var dataToVerify = GenerateComparison(authenticatorData, clientDataJSON);
 
-    if (rawId == data.GetProperty("id").GetString() && 
-        IsDataValid(data.GetProperty("clientDataJSON").GetString(), 
-        challenge.TrimEnd('='), origin.AbsoluteUri.TrimEnd('/')))
+    realms.TryGetValue(origin.Host, out var realm);
+    var split = realm.Split(' ');
+
+    if (split[0] == data.GetProperty("id").GetString() && 
+        IsDataValid(clientDataJSON, challenge.TrimEnd('='), origin.AbsoluteUri.TrimEnd('/')) &&
+        IsSignatureValid(split[1], data.GetProperty("signature").GetString(), dataToVerify))
     {
         ctx.Response.Cookies.Append(cookieName, GenerateToken(), new CookieOptions { HttpOnly = true, Secure = true });
     }
@@ -151,6 +156,30 @@ bool IsDataValid(string encodedData, string challenge, string origin)
     var originValid = clientData.GetProperty("origin").GetString().Equals(origin);
 
     return typeValid && challengeValid && originValid;
+}
+
+byte[] GenerateComparison(string authenticatorData, string clientDataJSON)
+{
+    var auth = Convert.FromBase64String(authenticatorData);
+    using var sha256 = SHA256.Create();
+    var hash = sha256.ComputeHash(Convert.FromBase64String(clientDataJSON));
+
+    var data = new byte[auth.Length + hash.Length];
+    auth.CopyTo(data, 0);
+    hash.CopyTo(data, auth.Length);
+
+    return data;
+}
+
+bool IsSignatureValid(string publicKey, string signature, byte[] comparison)
+{
+    var key = Convert.FromBase64String(publicKey);
+    var sig = Convert.FromBase64String(signature);
+
+    using var ecdsa = ECDsa.Create();
+    ecdsa.ImportSubjectPublicKeyInfo(key, out _);
+
+    return ecdsa.VerifyData(comparison, sig, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence);
 }
 
 string GenerateToken()

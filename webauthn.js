@@ -15,7 +15,7 @@ async function configure() {
         json.publicKey.challenge = atobarray(json.publicKey.challenge)
         json.publicKey.user.id = atobarray(json.publicKey.user.id)
         let cred = await navigator.credentials.create(json)
-        window.command.innerHTML = 'On your server, save this key in appsettings under realms section:<br /><pre>"' + window.location.hostname + '": "' + barraytoa(cred.rawId) + '"</pre>'
+        window.command.innerHTML = 'On your server, save this key in appsettings under realms section:<br /><pre>"' + window.location.hostname + '": "' + barraytoa(cred.rawId) + ' ' + barraytoa(cred.response.getPublicKey()) + '"</pre>'
     } catch (e) {
         console.log(e)
     }
