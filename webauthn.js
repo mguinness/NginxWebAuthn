@@ -16,6 +16,7 @@ async function configure() {
         json.publicKey.user.id = atobarray(json.publicKey.user.id)
         let cred = await navigator.credentials.create(json)
         window.command.innerHTML = 'On your server, save this key in appsettings under realms section:<br /><pre>"' + window.location.hostname + '": "' + barraytoa(cred.rawId) + ' ' + barraytoa(cred.response.getPublicKey()) + '"</pre>'
+        window.command.innerHTML += '<br />If using docker container, set this environment variable:<br /><pre>Realms__' + window.location.hostname + '=' + barraytoa(cred.rawId) + ' ' + barraytoa(cred.response.getPublicKey()) + '</pre>'
     } catch (e) {
         console.log(e)
     }

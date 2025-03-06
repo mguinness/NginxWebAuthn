@@ -2,6 +2,8 @@
 [WebAuthn](https://en.wikipedia.org/wiki/WebAuthn) for [nginx](https://en.wikipedia.org/wiki/Nginx) using [auth_request](http://nginx.org/en/docs/http/ngx_http_auth_request_module.html#auth_request).  Project is inspired and ported from 
 [NGINX + WebAuthn for your small scale web applications](https://github.com/newhouseb/nginxwebauthn) repository.
 
+Docker images are available in Docker Hub at [mguinness/nginxwebauthn](https://hub.docker.com/r/mguinness/nginxwebauthn).
+
 Modify your nginx configuration as follows.  Update `server_name` and your SSL settings (WebAuthn requires SSL).
 
 ```
@@ -36,5 +38,7 @@ server {
 Run the ASP.NET Core application and navigate to the configured nginx site.  You should be automatically routed to `/auth/login`.
 
 Insert your security key to register it and you will get a message that includes the public key.  Copy and paste it into the `Realms` section in the appsettings.json file.
+
+If you are using docker, create a text file and place the environment variable on a new line.  Then run docker and use the `--env-file` flag with the path to the file.
 
 After restarting the application and navigating to the site, you should be prompted to insert your security key to authenticate.
